@@ -4,33 +4,26 @@ from pySMART import Device
 class SMART:
     def __init__(self):
         self.deviceList = list()
-        self.devicesData = []
 
-     #to run a smartctl command
+    # run smartctl in cli
     def RunSmartCtl(self, strArgs):
-        #get the command with strArgs as the argument
         cmdString = "smartctl " + strArgs
-        #get command output and store each line in a list
         output = os.popen(cmdString).read()
-        lines = str.splitlines(output)
-        return lines
+        return str.splitlines(output)
 
-    #to obtain all device ids
+    # get all device ids
     def GetDeviceIds(self):
         lines = self.RunSmartCtl("--scan")
-        
         for line in lines:
             deviceId = str.split(line, " " ,1)[0]
             self.deviceList.append(deviceId)
 
-    #get the device info
+    # get device info
     def GetDeviceInfo(self, deviceId):
         item = {}
         deviceInfoLines = self.RunSmartCtl("-i " + deviceId)
         bEnteredInfoSection = False
-
         item['deviceId'] = deviceId
-        
         for line2 in deviceInfoLines:
             if not bEnteredInfoSection:
                 if line2.lower() == "=== start of information section ===":
@@ -78,16 +71,14 @@ class SMART:
                         item['smartSupportEnabled'] = 'yes'
                     elif strTemp == "disabled":
                         item['smartSupport'] = 'no'
-
         assess = Device(deviceId)
         item['smartStatus'] = assess.assessment
-
         return item
 
+    # get all devices and their info
     def getInfo(self):
         self.GetDeviceIds()
         data = []
         for dvc in self.deviceList:
             data.append(self.GetDeviceInfo(dvc))
-
         return data

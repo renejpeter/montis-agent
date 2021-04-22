@@ -10,76 +10,106 @@ import numpy
 import json
 from smart import SMART
 
-data = {}
+class MONTIS:
+    def __init__(self):
+        self.data = {}
+        self.payload = ''
 
-# Hostname
-data['hostname'] = platform.node()
+    # get hostname
+    def getHostname(self):
+        self.data['hostname'] = platform.node()
 
-# OS
-uname = platform.uname()
-data['platform'] = uname.system
-data['osRelease'] = uname.release
-data['osVersion'] = uname.version
-data['osArch'] = list(platform.architecture())[0]
+    # get OS information
+    def getOsInfo(self):
+        uname = platform.uname()
+        self.data['platform'] = uname.system
+        self.data['osRelease'] = uname.release
+        self.data['osVersion'] = uname.version
+        self.data['osArch'] = list(platform.architecture())[0]
 
-# Uptime
-upttime = float(uptime.uptime())
-uptday = upttime // (24 * 3600)
-upttime = upttime % (24 * 3600)
-upthour = upttime // 3600
-upttime %= 3600
-uptminutes = upttime // 60
-upttime %= 60
-uptseconds = upttime
-data['uptime'] = f"%d:%d:%d:%d" % (uptday, upthour, uptminutes, uptseconds)
+    # get uptime
+    def getUptime(self):
+        time = float(uptime.uptime())
+        day = time // (24 * 3600)
+        time = time % (24 * 3600)
+        hour = time // 3600
+        time %= 3600
+        minutes = time // 60
+        time %= 60
+        seconds = time
+        self.data['uptime'] = f"%d:%d:%d:%d" % (day, hour, minutes, seconds)
 
-# Last Boot Time
-data['lastBootTime'] = str(uptime.boottime())
+    # get last boot time
+    def getLastBoot(self):
+        self.data['lastBootTime'] = str(uptime.boottime())
 
-# Timezone
-def utcOffset():
-    minute = (time.localtime().tm_gmtoff / 60) % 60
-    hour = ((time.localtime().tm_gmtoff / 60) - minute) / 60
-    utcoffset = "%.2d%.2d" %(hour, minute)
-    if utcoffset[0] != '-':
-        utcoffset = '+' + utcoffset
-    return utcoffset
-data['timezoneOffset'] = utcOffset()
+    # get timezone offset
+    def getTimezone(self):
+        minute = (time.localtime().tm_gmtoff / 60) % 60
+        hour = ((time.localtime().tm_gmtoff / 60) - minute) / 60
+        utcOffset = "%.2d%.2d" %(hour, minute)
+        if utcOffset[0] != '-':
+            utcOffset = '+' + utcOffset
+        self.data['timezoneOffset'] = utcOffset
 
-# CPU
-data['cpuMeta'] = {}
-data['cpuMeta']['model'] = cpuinfo.get_cpu_info()['brand_raw']
-data['cpuMeta']['cores'] = psutil.cpu_count(False)
-data['cpuMeta']['threads'] = psutil.cpu_count(True)
-data['cpuLoad'] = list(psutil.getloadavg())
+    # get cpu information
+    def getCpuInfo(self):
+        self.data['cpuLoad'] = list(psutil.getloadavg())
+        self.data['cpuMeta'] = {}
+        self.data['cpuMeta']['model'] = cpuinfo.get_cpu_info()['brand_raw']
+        self.data['cpuMeta']['cores'] = psutil.cpu_count(False)
+        self.data['cpuMeta']['threads'] = psutil.cpu_count(True)
 
-# Memory
-memRaw = dict(psutil.virtual_memory()._asdict())
-data['memoryTotal'] = memRaw['total']
-data['memoryAvailable'] = memRaw['available']
+    # get memory information
+    def getMemoryInfo(self):
+        memRaw = dict(psutil.virtual_memory()._asdict())
+        self.data['memoryTotal'] = memRaw['total']
+        self.data['memoryAvailable'] = memRaw['available']
 
-# Storage Volumes
-volumeData = psutil.disk_partitions(False)
-data['volumes'] = []
-for v in volumeData:
-    if os.name == 'nt':
-        if 'cdrom' in v.opts or v.fstype == '':
-            continue
-    usage = psutil.disk_usage(v.mountpoint)
-    vol = {}
-    vol['device'] = v.device
-    vol['size'] = usage.total
-    vol['used'] = usage.used
-    vol['free'] = usage.free
-    vol['formatType'] = v.fstype
-    vol['mounted'] = v.mountpoint
-    data['volumes'].append(vol)
+    # get storage volumes
+    def getVolumeInfo(self):
+        vols = []
+        volData = psutil.disk_partitions(False)
+        for v in volData:
+            if os.name == 'nt':
+                if 'cdrom' in v.opts or v.fstype == '':
+                    continue
+            usage = psutil.disk_usage(v.mountpoint)
+            vol = {}
+            vol['device'] = v.device
+            vol['size'] = usage.total
+            vol['used'] = usage.used
+            vol['free'] = usage.free
+            vol['formatType'] = v.fstype
+            vol['mounted'] = v.mountpoint
+            vols.append(vol)
+        self.data['volumes'] = vols
 
-# Physical Disks
-smart = SMART()
-data['disks'] = smart.getInfo()
+    # get physical disk smart information
+    def getDiskInfo(self):
+        smart = SMART()
+        self.data['disks'] = smart.getInfo()
 
-# Save to JSON string
-string = json.dumps(data, sort_keys=False, indent=4)
+    # get nic info
+    def getNetworkInfo(self):
+        print('get network info')
 
-print(string)
+    def collectInfo(self):
+        self.getHostname()
+        self.getOsInfo()
+        self.getUptime()
+        self.getLastBoot()
+        self.getTimezone()
+        self.getCpuInfo()
+        self.getMemoryInfo()
+        self.getVolumeInfo()
+        self.getDiskInfo()
+        self.getNetworkInfo()
+        return self.data
+
+    def printJson(self):
+        print(json.dumps(self.data, sort_keys=False, indent=4))
+
+    def sendPing(self):
+        self.payload = json.dumps(self.data)
+        print('sent:' + self.payload)

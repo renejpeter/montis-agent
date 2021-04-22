@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import socket
 import platform
 import uptime
 import time
@@ -18,6 +19,10 @@ class MONTIS:
     # get hostname
     def getHostname(self):
         self.data['hostname'] = platform.node()
+
+    # get local ip
+    def getLocalIp(self):
+        self.data['localIp'] = socket.gethostbyname(self.data['hostname'])
 
     # get OS information
     def getOsInfo(self):
@@ -50,7 +55,7 @@ class MONTIS:
         utcOffset = "%.2d%.2d" %(hour, minute)
         if utcOffset[0] != '-':
             utcOffset = '+' + utcOffset
-        self.data['timezoneOffset'] = utcOffset
+        self.data['tz'] = utcOffset
 
     # get cpu information
     def getCpuInfo(self):
@@ -96,8 +101,9 @@ class MONTIS:
 
     def collectInfo(self):
         self.getHostname()
+        self.getLocalIp()
         self.getOsInfo()
-        self.getUptime()
+        #self.getUptime()
         self.getLastBoot()
         self.getTimezone()
         self.getCpuInfo()
@@ -106,10 +112,3 @@ class MONTIS:
         self.getDiskInfo()
         self.getNetworkInfo()
         return self.data
-
-    def printJson(self):
-        print(json.dumps(self.data, sort_keys=False, indent=4))
-
-    def sendPing(self):
-        self.payload = json.dumps(self.data)
-        print('sent:' + self.payload)
